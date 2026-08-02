@@ -167,11 +167,17 @@ def main():
             json.dump(keys_data, f, indent=2, default=str)
         print(f"  Fetched and cached {len(keys_data)} entries")
     
-    print(f"\nStep 2: Scraping tags from {len(keys_data)} itch.io pages...")
-    urls = list({entry["game"]["url"] for entry in keys_data if entry.get("game", {}).get("url")})
-    print(f"  {len(urls)} unique URLs to scrape")
-    tags_map = asyncio.run(scrape_all_tags(urls))
-    print(f"  Got tags for {sum(1 for v in tags_map.values() if v)}/{len(urls)} pages")
+    print(f"\nStep 2: Loading tags from browser cache...")
+    tags_cache_file = os.path.join(os.path.dirname(__file__), "tags-cache.json")
+    if os.path.exists(tags_cache_file):
+        with open(tags_cache_file) as f:
+            tags_map = json.load(f)
+        print(f"  Loaded tags for {sum(1 for v in tags_map.values() if v)}/{len(tags_map)} pages")
+    else:
+        print("  No tags-cache.json found, falling back to HTTP scrape")
+        urls = list({entry["game"]["url"] for entry in keys_data if entry.get("game", {}).get("url")})
+        tags_map = asyncio.run(scrape_all_tags(urls))
+        print(f"  Got tags for {sum(1 for v in tags_map.values() if v)}/{len(urls)} pages")
     
     print("\nStep 3: Deriving categories and assembling JSON...")
     library = build_library(keys_data, tags_map)
